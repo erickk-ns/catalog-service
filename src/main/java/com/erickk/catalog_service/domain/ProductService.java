@@ -1,5 +1,8 @@
 package com.erickk.catalog_service.domain;
 
+import com.erickk.catalog_service.exceptions.ProductAlreadyExist;
+import com.erickk.catalog_service.exceptions.ProductNotFoundException;
+
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -21,11 +24,15 @@ public class ProductService {
 
     public ProductResponse getById(Long id) {
         return productRepository.findById(id).map(ProductResponse::fromEntityToDto)
-                .orElseThrow(() -> new RuntimeException("Produto não encontrado."));
+                .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
 
     public ProductResponse addProduct(Product product) {
+
+        if (productRepository.existByName(product.name())) {
+            throw new ProductAlreadyExist(product.name());
+        }
         return ProductResponse.fromEntityToDto(productRepository.save(product));
     }
 
@@ -41,7 +48,7 @@ public class ProductService {
                             .version(existProduct.version())
                             .build();
                     return ProductResponse.fromEntityToDto(productRepository.save(productUpdate));
-                }).orElseThrow(() -> new RuntimeException("Falha"));
+                }).orElseThrow(() -> new ProductNotFoundException(id));
     }
 
 }
