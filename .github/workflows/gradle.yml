@@ -51,7 +51,6 @@ jobs:
       
   package:
     name: Package and Publish
-    if: ${{ github.ref == 'refs/heads/**' }}
     needs: [ build ]
     runs-on: ubuntu-latest
     permissions:
@@ -78,7 +77,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build container image
-        run: ./gradlew bootBuildImage --imageName ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+        run: |
+          echo "Building Docker image..."
+          ./gradlew bootBuildImage --imageName ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
+
+      - name: Publish container image
+        run: |
+          echo "Publishing Docker image..."
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
 
       - name: OCI image vulnerability scanning
         uses: anchore/scan-action@v3
@@ -93,6 +99,3 @@ jobs:
         if: success() || failure()
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
-
-      - name: Publish container image
-        run: docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
