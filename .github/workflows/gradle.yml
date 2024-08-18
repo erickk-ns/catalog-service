@@ -74,5 +74,13 @@ jobs:
       - name: Build container image
         run: ./gradlew bootBuildImage --imageName ghcr.io/${{ github.repository }}/my-image:${{ github.sha }}
 
+      - name: Scan container image for vulnerabilities
+        uses: anchore/scan-action@v3
+        id: scan
+        with:
+          image: ghcr.io/${{ github.repository }}/my-image:${{ github.sha }}
+          fail-build: true
+          severity-cutoff: high
+
       - name: Publish container image
         run: docker push ghcr.io/${{ github.repository }}/my-image:${{ github.sha }}
