@@ -2,11 +2,13 @@ package com.erickk.catalog_service.domain;
 
 import com.erickk.catalog_service.exceptions.ProductAlreadyExist;
 import com.erickk.catalog_service.exceptions.ProductNotFoundException;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+@Service
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -49,6 +51,13 @@ public class ProductService {
                             .build();
                     return ProductResponse.fromEntityToDto(productRepository.save(productUpdate));
                 }).orElseThrow(() -> new ProductNotFoundException(id));
+    }
+
+    public void removeProduct(Long id) {
+        if (!productRepository.existsById(id)) {
+            throw new ProductNotFoundException(id);
+        }
+        productRepository.deleteById(id);
     }
 
 }

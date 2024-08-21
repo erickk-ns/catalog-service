@@ -13,13 +13,12 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
@@ -31,6 +30,7 @@ class ProductServiceTest {
     private ProductService productService;
 
     List<Product> list;
+
     ProductResponse productResponse;
 
 
@@ -45,6 +45,9 @@ class ProductServiceTest {
 
         assertThatExceptionOfType(ProductAlreadyExist.class)
                 .isThrownBy(() -> productService.addProduct(list.getLast()));
+
+        verify(productRepository, never()).save(any());
+
     }
 
     @Test
@@ -63,7 +66,7 @@ class ProductServiceTest {
         assertThatExceptionOfType(ProductNotFoundException.class)
                 .isThrownBy(() -> productService.editDetailsProduct(8L, list.getFirst()));
 
-
+        verifyNoMoreInteractions(productRepository);
 
     }
 
@@ -76,10 +79,13 @@ class ProductServiceTest {
         when(productRepository.findById(anyLong())).thenReturn(Optional.ofNullable(list.getFirst()));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        var prodUpdate = productService.editDetailsProduct(1L, list.getFirst());
+        var prodUpdate = productService.editDetailsProduct(1L, product);
 
-        assertThat(product).isNotEqualTo(prodUpdate);
-        assertEquals(product.id(), prodUpdate.id());
+        assertThat(prodUpdate).isNotEqualTo(list.getFirst());
+        assertThat(prodUpdate.id()).isEqualTo(list.getFirst().id());
+        assertThat(prodUpdate.name()).isNotEqualTo(list.getFirst().name());
+
+
     }
 
     @Test
@@ -87,6 +93,7 @@ class ProductServiceTest {
         when(productRepository.findAll()).thenReturn(list);
 
         int sizeList = productService.listAllProduct().size();
+
         assertThat(sizeList).isEqualTo(2);
     }
 
@@ -96,13 +103,36 @@ class ProductServiceTest {
 
         var productId = productService.getById(1L);
         assertThat(productId).isEqualTo(productResponse);
+        assertThat(productId.name()).isEqualTo(productResponse.name());
     }
 
     @Test
     void shouldThrowProductNotFoundExceptionWhenProductfindByIdDoesNotExist() {
         when(productRepository.findById(anyLong())).thenThrow(ProductNotFoundException.class);
 
-        assertThrows(ProductNotFoundException.class, () -> productService.getById(8L));
+        assertThrows(ProductNotFoundException.class,
+                () -> productService.getById(8L));
+
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    void shouldThThrowProductNotFoundExceptionWhenRemoveProductDoesNotFind() {
+        when(productRepository.existsById(anyLong())).thenReturn(false);
+
+        assertThatExceptionOfType(ProductNotFoundException.class)
+                .isThrownBy(() -> productService.removeProduct(1L));
+    }
+
+    @Test
+    void shouldDeleteWhenRemoveProduct() {
+        when(productRepository.existsById(anyLong())).thenReturn(true);
+        doNothing().when(productRepository).deleteById(anyLong());
+
+        productService.removeProduct(1L);
+
+        verify(productRepository).deleteById(1L);
+        verifyNoMoreInteractions(productRepository);
     }
 
     private void createProduct() {
@@ -118,5 +148,6 @@ class ProductServiceTest {
                 "Galaxy", "Samsung", new BigDecimal("3800"),
                 "Samsung Top");
     }
+
 
 }
